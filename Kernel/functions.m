@@ -156,18 +156,20 @@ auc = Compile[{{train, _Integer, 1}, {guess, _Real, 1}},
     Do[
       If[y[[i - 1]] == 0,
         fpr[[i]] = fpr[[i - 1]] + mm;
-        tpr[[i]] = tpr[[i - 1]];auc = auc + tpr[[i]] * mm;
+        tpr[[i]] = tpr[[i - 1]];
+        auc = auc + tpr[[i]] * mm;
         ,
         fpr[[i]] = fpr[[i - 1]];
-        tpr[[i]] = tpr[[i - 1]] + mp;];,
+        tpr[[i]] = tpr[[i - 1]] + mp;
+      ],
       {i, 2, Length[y] + 1}
     ];
     some = Ordering[fpr];
     (*fpr=fpr[[some]];*)
     (*tpr=tpr[[some]];*)
     (*{Transpose[{fpr,tpr}],auc}*)
-    auc
-  ], CompilationTarget -> If[StringMatchQ[$System, ___ ~~ "Windows" ~~ ___], "WVM", "C"]
+    auc;
+  ], CompilationTarget -> If[StringFreeQ[$System, "Windows"], "C", "WVM", "WVM"]
 ];
 
 

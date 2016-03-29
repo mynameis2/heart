@@ -13,7 +13,7 @@ fix[im_] := Module[{dim, dat},
 ];
 
 (* intermediate func to fix dicom metainfo *)
-changeMeta::usage = "changeMeta[meta, dim] - change metainfo(arg: meta) changeMeta[{some.., Rows -> N, Columns -> M}, {M,N} ] -> {some.., Rows -> M, Columns -> N}";
+changeMeta::usage = "changeMeta[meta, dim] - change metainfo(arg: meta), changeMeta[{some.., Rows -> N, Columns -> M}, {M,N} ] -> {some.., Rows -> M, Columns -> N}";
 changeMeta[meta_, dim_] := Module[{some},
   some = DeleteCases[meta[[All, 1]], _?(# == "Rows"\[Or]# == "Columns"&)];
   Join[
@@ -24,7 +24,8 @@ changeMeta[meta_, dim_] := Module[{some},
 
 (*fix some dicom files(to uniform across Patient): rotate it*)
 (*saxSeriesList - list of full paths to sax directory*)
-rotateDICOM::usage = "rotateDICOM[saxSeriesList] in place rotate images for all dicom files in all directories in this saxSeriesList list, ex: saxSeriesList = {\"test/1109/study/sax_54\", \"test/1109/study/sax_55\", \"test/1109/study/sax_56\"}";
+rotateDICOM::usage = "rotateDICOM[saxSeriesList] in place rotate images for all dicom files in all directories in this saxSeriesList list,
+ex: saxSeriesList = {\"test/1109/study/sax_54\", \"test/1109/study/sax_55\", \"test/1109/study/sax_56\"}";
 rotateDICOM[saxSeriesList_] := Module[{temp},
   Do[
     ParallelDo[
@@ -54,12 +55,12 @@ For all dicom files in all directories in saxSeriesList list, ex: saxSeriesList 
 padDICOM[saxSeriesList_,{horizontalPad_,verticalPad_}, {height_, width_}] := Module[{temp},
   Do[
     ParallelDo[
-    (*import dicom*)
+      (*import dicom*)
       tmp = Import[file,
-        {{"BitDepth", "ColorMap", "ColorSpace", "Data", "Graphics",
-          "GraphicsList", "Image", "ImageList", "ImageSize",
-          "MetaInformation", "Overlays"}}];
+        {{"BitDepth", "ColorMap", "ColorSpace", "Data", "Graphics", "GraphicsList",
+          "Image", "ImageList", "ImageSize", "MetaInformation", "Overlays"}}];
       (*export dicom file*)
+(****      REWRITE ORIGINAL FILE      ****)
       Export[file,
         {
         (*pad image with 0*)
