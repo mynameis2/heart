@@ -3,6 +3,8 @@
 (* :Author: mynameis_ *)
 (* :Date: 26.03.16 *)
 
+
+
 (* additional row in image *)
 fix::usage = "fix[image] - add zero column from the left side to image"
 fix[im_] := Module[{dim, dat},
@@ -11,6 +13,8 @@ fix[im_] := Module[{dim, dat},
   dat = Prepend[dat, Array[0&, dim]];
   Image@Transpose[dat]
 ];
+
+
 
 (* intermediate func to fix dicom metainfo *)
 changeMeta::usage = "changeMeta[meta, dim] - change metainfo(arg: meta), changeMeta[{some.., Rows -> N, Columns -> M}, {M,N} ] -> {some.., Rows -> M, Columns -> N}";
@@ -22,6 +26,9 @@ changeMeta[meta_, dim_] := Module[{some},
   ]
 ];
 
+
+
+(****      REWRITE ORIGINAL FILE      ****)
 (*fix some dicom files(to uniform across Patient): rotate it*)
 (*saxSeriesList - list of full paths to sax directory*)
 rotateDICOM::usage = "rotateDICOM[saxSeriesList] in place rotate images for all dicom files in all directories in this saxSeriesList list,
@@ -48,6 +55,9 @@ rotateDICOM[saxSeriesList_] := Module[{temp},
     , {dir, saxSeriesList}]
 ];
 
+
+
+(****      REWRITE ORIGINAL FILE      ****)
 padDICOM::usage = "padDICOM[saxSeriesList,{horizontalPad,verticalPad}, {height, width}] in place pad images to uniform image sizes in all patient sax directories.
 For all dicom files in all directories in saxSeriesList list, ex: saxSeriesList = {\"test/1109/study/sax_54\", \"test/1109/study/sax_55\", \"test/1109/study/sax_56\"}
 {horizontalPad,verticalPad} - positive integers, how much pad images in pixels
@@ -70,8 +80,6 @@ padDICOM[saxSeriesList_,{horizontalPad_,verticalPad_}, {height_, width_}] := Mod
         },
         {{"Data", "MetaInformation"}}
       ];
-
       , {file, FileNames[__, sax]}];
-
     , {sax, saxSeriesList}]
 ];

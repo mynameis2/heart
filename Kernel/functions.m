@@ -3,6 +3,8 @@
 (* :Author: mynameis_ *)
 (* :Date: 28.03.16 *)
 
+
+
 (* some short-names for often used functions *)
 LaunchKernels[8];
 SetDirectory[NotebookDirectory[]];
@@ -30,8 +32,11 @@ ap[data_] := ArrayPlot[data, PixelConstrained -> 1];
 select[list_, del_] := Pick[list, StringFreeQ[list, {__ ~~ del ~~ ___}]];
 
 
+
 (*temp fu, from boinding boxes list to areas *)
 sboxsome[box_] := box[[1]] -> Times @@ Subtract @@ box[[2]];
+
+
 
 (* null border values *)
 padnull[data2d_] := Module[{data = data2d, dim = Dimensions[data2d], size = 5},
@@ -47,6 +52,8 @@ maxbb[bin_] := Module[{pre, dim = Dimensions[bin], col, row},
   {col, row} = Transpose@Round[SortBy[ComponentMeasurements[bin, "BoundingBox"], -sboxsome[#][[2]]&][[1,2]] ];
   {dim[[1]] - Reverse[row], col}
 ];
+
+
 
 (* values on border. for replace purpuses, del border components *)
 border2d[dat_] := Module[{s = 5, rule},
@@ -73,6 +80,8 @@ border3d[dat_] := Module[{s = 3, rule},
   dat /. rule
 ];
 
+
+
 (* metainfo 4 predict purpuse, lazy remember function result after evaluation *)
 getMetainfo[PID_] := (getMetainfo[PID] = Module[{root, one, two, sax, length, a, min},
 (* change root directory *)
@@ -96,6 +105,7 @@ getMetainfo[PID_] := (getMetainfo[PID] = Module[{root, one, two, sax, length, a,
 ]);
 
 
+
 (* import train volumes *)
 vol = Module[{csv, pid, min, max, dict},
   {pid, min, max} = Transpose[Drop[Import["train.csv", "Data"], 1]];
@@ -104,6 +114,7 @@ vol = Module[{csv, pid, min, max, dict},
   AssociateTo[dict, "max" -> max];
   dict
 ];
+
 
 
 (* compute most probable left ventricle position from 2D-histogram centers position *)
@@ -117,7 +128,9 @@ computeTrueCenter[cent_] := Module[{x, y, bin, some, dict},
   Keys[Sort[dict]][[-1]]
 ];
 
-(* compute params of 2dim image grid {{im11, im12,..},{im21,im22,..},..}(n x m) \[Rule] (n x m x 11)  *)
+
+
+(* compute params of 2dim image grid {{im11, im12,..},{im21,im22,..},..}(n x m) -> (n x m x 11)  *)
 computeParams[imgrid_] := Module[{imDim = imdim@imgrid[[1, 1]], gridDim = dim@imgrid, params, trueCenter, cent},
   cent = Map[ComponentMeasurements[#, "Centroid"][[1, 2]]&, imgrid, {2}];
   trueCenter = computeTrueCenter[cent];
@@ -142,6 +155,7 @@ importgrid[PID_] := Module[{root, sax, imgrid},
   imgrid = ParallelMap[ima@Import[#, "Image"]&, Map[FileNames[__, #]&, sax], {2}];
   imgrid
 ];
+
 
 
 (* ROC-AUC calculate *)
@@ -173,6 +187,7 @@ auc = Compile[{{train, _Integer, 1}, {guess, _Real, 1}},
 ];
 
 
+
 (* FUNCTIONAL STYLE, twenty times slower, can not be Compiled well *)
 (* 10s for 1M data length, i5 single thread, WVM compile *)
 myauc[train_, guess_] := Module[{y, tpr, fpr, auc, list},
@@ -191,8 +206,37 @@ myauc[train_, guess_] := Module[{y, tpr, fpr, auc, list},
 ];
 
 
+
+
+(* import listmax & listmin variables, *)
+(* generate empirical distribution to generate CRF from it later *)
+(* need for patients, which LV volume can not be determined from other methods, and only way is predict LV volume from DICOM metainfo *)
+
+(*listmin={};listmax={};
+Do[
+  Module[{s, pred, true},
+  *)(* split train/test *)(*
+    s = RandomSample[Range[500], 400];
+    stest = Complement[Range[500], s];
+
+    minPredict = Predict[train[[s]] -> vol["min"][[s]], Method -> "RandomForest"];
+    maxPredict = Predict[train[[s]] -> vol["max"][[s]], Method -> "RandomForest"];
+
+    pred = minPredict /@ train[[stest]];    true = vol["min"][[stest]];
+    AppendTo[listmin, pred / true - 1];
+
+    pred = maxPredict /@ train[[stest]];    true = vol["max"][[stest]];
+    AppendTo[listmax, pred / true - 1];
+  ],{26}
+];*)
+
+(* serialize listmin&max to disk *)
+(*DumpSave["montecarlo-min-max-volumes.mx",{listmin,listmax}];*)
+
+(* import empirical data to build distribution *)
+Import[fj[nd[],"montecarlo-min-max-volumes.mx"]];
+
 (* stupid predict CDF *)
-(* Import[fj[nd[],"list_min_max.mx"]] *)
 predict[PID_] := Module[{info = getMetainfo[PID], max, min, kernel, minCDF, maxCDF},
   max = maxPredict@info;
   min = minPredict@info;
@@ -202,6 +246,7 @@ predict[PID_] := Module[{info = getMetainfo[PID], max, min, kernel, minCDF, maxC
   minCDF = Table[CDF[kernel, ((x - min) / min)], {x, 0., 599., 1.}];
   {minCDF, maxCDF}
 ];
+
 
 
 (* temp function, flatten and write segmented image to csv *)
