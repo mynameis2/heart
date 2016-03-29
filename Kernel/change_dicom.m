@@ -61,7 +61,6 @@ padDICOM[saxSeriesList_,{horizontalPad_,verticalPad_}, {height_, width_}] := Mod
           "Image", "ImageList", "ImageSize", "MetaInformation", "Overlays"}}];
       (*export dicom file*)
 (****      REWRITE ORIGINAL FILE      ****)
-      (* check git diff HEAD *)
       Export[file,
         {
         (*pad image with 0*)
