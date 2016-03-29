@@ -209,7 +209,7 @@ myauc[train_, guess_] := Module[{y, tpr, fpr, auc, list},
 
 
 (* import listmax & listmin variables, *)
-(* generate empirical distribution to generate CRF from it later *)
+(* generate empirical distribution to generate CDF from it later *)
 (* need for patients, which LV volume can not be determined from other methods, and only way is predict LV volume from DICOM metainfo *)
 
 (*listmin={};listmax={};
@@ -234,7 +234,11 @@ Do[
 (*DumpSave["montecarlo-min-max-volumes.mx",{listmin,listmax}];*)
 
 (* import empirical data to build distribution *)
+(* !!!!TODO *)
+(*train = ParallelMap[getMetainfo, Range[500]]; // t*)
 Import[fj[nd[],"montecarlo-min-max-volumes.mx"]];
+minPredict = Predict[train -> vol["min"], Method -> "RandomForest"];
+maxPredict = Predict[train -> vol["max"], Method -> "RandomForest"];
 
 (* stupid predict CDF *)
 predict[PID_] := Module[{info = getMetainfo[PID], max, min, kernel, minCDF, maxCDF},
