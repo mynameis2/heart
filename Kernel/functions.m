@@ -7,7 +7,7 @@
 
 (* some short-names for often used functions *)
 LaunchKernels[8];
-SetDirectory[NotebookDirectory[]];
+SetDirectory@NotebookDirectory[];
 fj[x__] := FileNameJoin[{x}];
 diap = ToString /@ Join[Range[500], Range[701, 1140]];
 t = AbsoluteTiming;
@@ -82,26 +82,29 @@ border3d[dat_] := Module[{s = 3, rule},
 
 
 
-(* metainfo 4 predict purpuse, lazy remember function result after evaluation *)
+(* metainfo for predict purpuse, lazy remember function result after evaluation *)
+(* create several features from dicom meta-information *)
 getMetainfo[PID_] := (getMetainfo[PID] = Module[{root, one, two, sax, length, a, min},
 (* change root directory *)
   root = If[te@PID <= 500, "train", "test"];
   sax = select[FileNames[__, fj[root, ToString[PID], "study"]], "ch"];
-  sax = SortBy[sax, te[Last[ss[#, "_"]]]&];
+  sax = SortBy[sax, te[Last[ss[#, "_"]]]&]; (*sort by sax number, reason is lexicographic order from FileNames*)
   length = Length[sax];
   sax = sax[[;; 2]];
   a = Table[{"PatientSex", "PatientAge", "Rows", "Columns", "PixelSpacing", "ImagePosition"} /. Import[FileNames[__, sax[[i]]][[1]], "MetaInformation"], {i, 3}];
+
+  (*try to fix errors in determining between slices distance*)
   min = Sort[{EuclideanDistance[a[[1, 6]], a[[2, 6]]], EuclideanDistance[a[[1, 6]], a[[3, 6]]], EuclideanDistance[a[[2, 6]], a[[3, 6]]]}];
   min = If[min[[1]] < 1, If[min[[2]] < 1, If[min[[3]] < 1, 7, min[[3]]], min[[2]]], min[[1]]];
-  If[min > 20, min /= 2;];
+  If[min > 20, min /= 2;];                      (* last try to fix possible errors *)
   N@{
-    a[[1, 1]] /. {"M" -> 1, "F" -> 0},
-    a[[1, 2]].{1, 1 / 12., 1 / 365.},
-    Log[Times @@ (a[[1, 3 ;; 4]] * a[[1, 5]])],
-    min,
-    length,
-    a[[1, 5, 1]]
-  }
+    a[[1, 1]] /. {"M" -> 1, "F" -> 0}, (* patient sex *)
+    a[[1, 2]].{1, 1 / 12., 1 / 365.}, (* age in years *)
+    Log[Times @@ (a[[1, 3 ;; 4]] * a[[1, 5]])], (* log(normilize image area in pixel^2) *)
+    min, (* min image intensity *)
+    length, (* sax series length, partialy equivalent to heart height *)
+    a[[1, 5, 1]]                                (* pixel spacing *)
+  };
 ]);
 
 
@@ -212,6 +215,11 @@ myauc[train_, guess_] := Module[{y, tpr, fpr, auc, list},
 (* generate empirical distribution to generate CDF from it later *)
 (* need for patients, which LV volume can not be determined from other methods, and only way is predict LV volume from DICOM metainfo *)
 
+(* !!!! T!O!D!O, create .mx file with trainMetaInfo *)
+(*trainMetaInfo = ParallelMap[getMetainfo, Range[500]]; // t*)
+
+
+(*what kind of error we can expect, get res from cross validation parts*)
 (*listmin={};listmax={};
 Do[
   Module[{s, pred, true},
@@ -219,13 +227,13 @@ Do[
     s = RandomSample[Range[500], 400];
     stest = Complement[Range[500], s];
 
-    minPredict = Predict[train[[s]] -> vol["min"][[s]], Method -> "RandomForest"];
-    maxPredict = Predict[train[[s]] -> vol["max"][[s]], Method -> "RandomForest"];
+    minPredict = Predict[trainMetaInfo[[s]] -> vol["min"][[s]], Method -> "RandomForest"];
+    maxPredict = Predict[trainMetaInfo[[s]] -> vol["max"][[s]], Method -> "RandomForest"];
 
-    pred = minPredict /@ train[[stest]];    true = vol["min"][[stest]];
+    pred = minPredict /@ trainMetaInfo[[stest]];    true = vol["min"][[stest]];
     AppendTo[listmin, pred / true - 1];
 
-    pred = maxPredict /@ train[[stest]];    true = vol["max"][[stest]];
+    pred = maxPredict /@ trainMetaInfo[[stest]];    true = vol["max"][[stest]];
     AppendTo[listmax, pred / true - 1];
   ],{26}
 ];*)
@@ -234,11 +242,9 @@ Do[
 (*DumpSave["montecarlo-min-max-volumes.mx",{listmin,listmax}];*)
 
 (* import empirical data to build distribution *)
-(* !!!!TODO *)
-(*train = ParallelMap[getMetainfo, Range[500]]; // t*)
 Import[fj[nd[],"montecarlo-min-max-volumes.mx"]];
-minPredict = Predict[train -> vol["min"], Method -> "RandomForest"];
-maxPredict = Predict[train -> vol["max"], Method -> "RandomForest"];
+minPredict = Predict[trainMetaInfo -> vol["min"], Method -> "RandomForest"];
+maxPredict = Predict[trainMetaInfo -> vol["max"], Method -> "RandomForest"];
 
 (* stupid predict CDF *)
 predict[PID_] := Module[{info = getMetainfo[PID], max, min, kernel, minCDF, maxCDF},
