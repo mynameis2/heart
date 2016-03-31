@@ -83,3 +83,9 @@ padDICOM[saxSeriesList_,{horizontalPad_,verticalPad_}, {height_, width_}] := Mod
       , {file, FileNames[__, sax]}];
     , {sax, saxSeriesList}]
 ];
+
+
+
+
+(*NEED TO CREATE STEPS TO DETERMINE WHAT IMAGES NEED TO ROTATE, PAD, CHANGE......*)
+(*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*)

@@ -121,7 +121,7 @@ vol = Module[{csv, pid, min, max, dict},
 
 
 (* compute most probable left ventricle position from 2D-histogram centers position *)
-(* assuming that cent - is (n x m x 2) array over all images in sax series *)
+(* assuming that cent - is (n x m x 2) array over All images in sax series *)
 computeTrueCenter[cent_] := Module[{x, y, bin, some, dict},
   some = HistogramList[Flatten[cent, 1]];
   x = MovingAverage[N@some[[1, 1]], 2];
@@ -156,7 +156,7 @@ importgrid[PID_] := Module[{root, sax, imgrid},
   sax = select[FileNames[__, fj[root, ToString[PID], "study"]], "ch"];
   sax = SortBy[sax, te[ss[#, "_"][[-1]]]&];
   imgrid = ParallelMap[ima@Import[#, "Image"]&, Map[FileNames[__, #]&, sax], {2}];
-  imgrid
+  imgrid;
 ];
 
 
@@ -211,15 +211,16 @@ myauc[train_, guess_] := Module[{y, tpr, fpr, auc, list},
 
 
 
-(* import listmax & listmin variables, *)
-(* generate empirical distribution to generate CDF from it later *)
-(* need for patients, which LV volume can not be determined from other methods, and only way is predict LV volume from DICOM metainfo *)
-
 (* !!!! T!O!D!O, create .mx file with trainMetaInfo *)
 (*trainMetaInfo = ParallelMap[getMetainfo, Range[500]]; // t*)
 
+(*For patients, where we CAN NOT determine volume directly from images we can try determine it from DICOM meta-info*)
+(*Beside volume prediction we need also uncertanty of this prediction(to create CDF later).*)
+(*So, let's do a trick. *)
+(*Train RF to predict min & max volumes directly from patient dicom meta-info;*)
+(*Calculate on validation set what error we get. Use many random subsamples of generating 400/100(train\val) splitting.*)
+(*and later use this error(well, we get a distribution of errors) to create CDF of volume prediction.*)
 
-(*what kind of error we can expect, get res from cross validation parts*)
 (*listmin={};listmax={};
 Do[
   Module[{s, pred, true},
@@ -242,17 +243,20 @@ Do[
 (*DumpSave["montecarlo-min-max-volumes.mx",{listmin,listmax}];*)
 
 (* import empirical data to build distribution *)
-Import[fj[nd[],"montecarlo-min-max-volumes.mx"]];
+
 minPredict = Predict[trainMetaInfo -> vol["min"], Method -> "RandomForest"];
 maxPredict = Predict[trainMetaInfo -> vol["max"], Method -> "RandomForest"];
 
+
+(* import listmax & listmin variables, *)
+Import[fj[nd[],"montecarlo-min-max-volumes.mx"]];
 (* stupid predict CDF *)
 predict[PID_] := Module[{info = getMetainfo[PID], max, min, kernel, minCDF, maxCDF},
   max = maxPredict@info;
   min = minPredict@info;
-  kernel = SmoothKernelDistribution[listmax // Flatten];
+  kernel = SmoothKernelDistribution[Flatten[listmax]];
   maxCDF = Table[CDF[kernel, ((x - max) / max)], {x, 0., 599., 1.}];
-  kernel = SmoothKernelDistribution[listmin // Flatten];
+  kernel = SmoothKernelDistribution[Flatten[listmin]];
   minCDF = Table[CDF[kernel, ((x - min) / min)], {x, 0., 599., 1.}];
   {minCDF, maxCDF}
 ];
