@@ -1,1 +1,4 @@
 .idea
+*.nb
+train
+test

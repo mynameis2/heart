@@ -49,7 +49,7 @@ padnull[data2d_] := Module[{data = data2d, dim = Dimensions[data2d], size = 5},
 
 (* maxbb - max bounding box, correct axes direction *)
 maxbb[bin_] := Module[{pre, dim = Dimensions[bin], col, row},
-  {col, row} = Transpose@Round[SortBy[ComponentMeasurements[bin, "BoundingBox"], -sboxsome[#][[2]]&][[1,2]] ];
+  {col, row} = Transpose@Round[SortBy[ComponentMeasurements[bin, "BoundingBox"], -sboxsome[#][[2]]&][[1, 2]] ];
   {dim[[1]] - Reverse[row], col}
 ];
 
@@ -106,17 +106,6 @@ getMetainfo[PID_] := (getMetainfo[PID] = Module[{root, one, two, sax, length, a,
     a[[1, 5, 1]]                                (* pixel spacing *)
   };
 ]);
-
-
-
-(* import train volumes *)
-vol = Module[{csv, pid, min, max, dict},
-  {pid, min, max} = Transpose[Drop[Import["train.csv", "Data"], 1]];
-  dict = AssociationThread[pid, Thread[{min, max}]];
-  AssociateTo[dict, "min" -> min];
-  AssociateTo[dict, "max" -> max];
-  dict
-];
 
 
 
@@ -242,6 +231,14 @@ Do[
 (* serialize listmin&max to disk *)
 (*DumpSave["montecarlo-min-max-volumes.mx",{listmin,listmax}];*)
 
+(* import train volumes *)
+vol = Module[{csv, pid, min, max, dict},
+  {pid, min, max} = Transpose[Drop[Import["train.csv", "Data"], 1]];
+  dict = AssociationThread[pid, Thread[{min, max}]];
+  AssociateTo[dict, "min" -> min];
+  AssociateTo[dict, "max" -> max];
+  dict
+];
 (* import empirical data to build distribution *)
 
 minPredict = Predict[trainMetaInfo -> vol["min"], Method -> "RandomForest"];
@@ -249,7 +246,7 @@ maxPredict = Predict[trainMetaInfo -> vol["max"], Method -> "RandomForest"];
 
 
 (* import listmax & listmin variables, *)
-Import[fj[nd[],"montecarlo-min-max-volumes.mx"]];
+Import[fj[nd[], "montecarlo-min-max-volumes.mx"]];
 (* stupid predict CDF *)
 predict[PID_] := Module[{info = getMetainfo[PID], max, min, kernel, minCDF, maxCDF},
   max = maxPredict@info;
@@ -279,3 +276,39 @@ predict[PID_] := Module[{info = getMetainfo[PID], max, min, kernel, minCDF, maxC
     {spatial, SPAT}, {time, TIME}];
   Close[str];
 ];*)
+
+
+
+(*
+dict:
+      <|
+        "_Diastole" -> <| pid1 -> {0,1,..599}, pid2 -> {0,1,..599} |>,
+        "_Systole" -> <| pid1 -> {0,1,..599}, pid2 -> {0,1,..599} |>
+      |>
+*)
+
+writeSubmission[dict_, path_] := Module[{header, line, str},
+  header = Composition[Apply[StringJoin], Riffle[#, ","]&, Join[{"Id"}, #]&, Map["P" <> ToString[#]&]]@Range[0, 599];
+  str = OpenWrite[path];
+  WriteLine[str, header];
+  Do[
+  (* write "_Dyastole" line *)
+    line = Composition[
+      ToString[pid] <> "_Diastole," <> #&,
+      Apply[StringJoin],
+      Riffle[#, ","]&,
+      Map[ToString]
+    ]@dict["_Diastole", pid];
+    WriteLine[str, line];
+    (* write "_Systole" line *)
+    line = Composition[
+      ToString[pid] <> "_Systole," <> #&,
+      Apply[StringJoin],
+      Riffle[#, ","]&,
+      Map[ToString]
+    ]@dict["_Systole", pid];
+    WriteLine[str, line];
+    , {pid, 701, 1140}]
+  Close[str];
+  Print["writing submission is done!"];
+];

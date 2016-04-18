@@ -15,7 +15,6 @@ fix[im_] := Module[{dim, dat},
 ];
 
 
-
 (* intermediate func to fix dicom metainfo *)
 changeMeta::usage = "changeMeta[meta, dim] - change metainfo(arg: meta), changeMeta[{some.., Rows -> N, Columns -> M}, {M,N} ] -> {some.., Rows -> M, Columns -> N}";
 changeMeta[meta_, dim_] := Module[{some},
